@@ -56,4 +56,10 @@ class MovieAdapter(private val clickListener: MovieClickListener) :
     interface MovieClickListener {
         fun onMovieClick(movie: Movie)
     }
+
+    fun setMovies(movieList: List<Movie>) {
+        movies.clear()
+        movies.addAll(movieList)
+        notifyDataSetChanged()
+    }
 }

@@ -1,21 +1,25 @@
 package com.example.test_lab_week_12
 
 import android.os.Bundle
+import android.view.View
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
+import android.widget.Spinner
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.test_lab_week_12.model.Movie
 import com.example.test_lab_week_12.model.MovieViewModel
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch
-import java.util.Calendar
 
 class MainActivity : AppCompatActivity() {
 
-    // Adapter sesuai interface MovieClickListener
     private val movieAdapter = MovieAdapter(object : MovieAdapter.MovieClickListener {
         override fun onMovieClick(movie: Movie) {
             Snackbar.make(
@@ -30,13 +34,19 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        val spinnerYear = findViewById<Spinner>(R.id.spinner_year)
         val recyclerView = findViewById<RecyclerView>(R.id.movie_list)
+
+        // FIX #1 — WAJIB
+        recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = movieAdapter
 
-        // Ambil repository dari MovieApplication
-        val movieRepository = (application as MovieApplication).movieRepository
+        val years = listOf("2023", "2024", "2025")
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, years)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        spinnerYear.adapter = adapter
 
-        // ViewModel factory
+        val movieRepository = (application as MovieApplication).movieRepository
         val movieViewModel = ViewModelProvider(
             this,
             object : ViewModelProvider.Factory {
@@ -47,24 +57,29 @@ class MainActivity : AppCompatActivity() {
             }
         )[MovieViewModel::class.java]
 
-        // Collect StateFlow
+        // FIX #2 — Listener Spinner yang benar
+        spinnerYear.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(
+                parent: AdapterView<*>?,
+                view: View?,
+                position: Int,
+                id: Long
+            ) {
+                movieViewModel.updateSelectedYear(years[position])
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
+
         lifecycleScope.launch {
-            repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
 
-                // Collect daftar film
                 launch {
-                    movieViewModel.popularMovies.collect { movies ->
-                        val currentYear = Calendar.getInstance().get(Calendar.YEAR).toString()
-
-                        val filtered = movies
-                            .filter { it.releaseDate?.startsWith(currentYear) == true }
-                            .sortedByDescending { it.popularity }
-
-                        movieAdapter.addMovies(filtered)
+                    movieViewModel.filteredMovies.collect { movies ->
+                        movieAdapter.setMovies(movies)
                     }
                 }
 
-                // Collect error kalau ada
                 launch {
                     movieViewModel.error.collect { errorMsg ->
                         if (errorMsg.isNotEmpty()) {
