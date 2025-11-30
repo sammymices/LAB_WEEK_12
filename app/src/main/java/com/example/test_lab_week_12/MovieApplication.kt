@@ -2,6 +2,7 @@ package com.example.test_lab_week_12
 
 import android.app.Application
 import com.example.test_lab_week_12.api.MovieService
+import com.example.test_lab_week_12.model.MovieRepository
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 
